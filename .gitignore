@@ -14,4 +14,6 @@ brew_bump_latest
 *.bak
 
 # VS Code files
-*.vscode/*
+*.vscode/*build.sh
+release.sh
+.DS_Store

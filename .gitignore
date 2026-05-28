@@ -14,6 +14,9 @@ brew_bump_latest
 *.bak
 
 # VS Code files
-*.vscode/*build.sh
+.vscode/
 release.sh
 .DS_Store
+
+# Workflow files
+.github/workflows

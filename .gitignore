@@ -1,4 +1,3 @@
-```gitignore
 # System files
 .DS_Store
 
@@ -16,7 +15,3 @@ brew_bump_latest
 # VS Code files
 .vscode/
 release.sh
-.DS_Store
-
-# Workflow files
-.github/workflows

@@ -17,7 +17,12 @@ jobs:
       - name: Check for new release and update formula
         run: |
           LATEST=$(curl -s https://api.github.com/repos/twinboi90/ZoomRecovery/releases/latest \
-            | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'])")
+            | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('tag_name', ''))")
+
+          if [ -z "$LATEST" ]; then
+            echo "Failed to fetch latest release or no releases found."
+            exit 1
+          fi
 
           CURRENT=$(sed -n 's|.*releases/download/\([^/]*\)/zoomrecovery.*|\1|p' Formula/zoomrecovery.rb)
 

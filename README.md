@@ -6,9 +6,14 @@ Homebrew formulae for tools by [@twinboi90](https://github.com/twinboi90).
 
 ```bash
 brew tap twinboi90/tap
+brew trust twinboi90/tap
 ```
-
-Then install any formula:
+* Side note:
+  ```bash
+    brew trust
+    ```
+lets Homebrew load formulae from this tap (required for third-party taps since Homebrew 6.0).
+Once you have tapped and trusted the repo, you can install any formula:
 
 ```bash
 brew install zoomrecovery

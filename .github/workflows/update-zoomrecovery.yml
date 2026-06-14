@@ -1,32 +1,44 @@
 name: Auto-update zoomrecovery formula
-
 on:
   schedule:
-    - cron: '0 * * * *'  # hourly
+    - cron: '0 6 * * *'  # hourly
   workflow_dispatch:
-
 permissions:
   contents: write
-
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Check for new release and update formula
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          LATEST=$(curl -s https://api.github.com/repos/twinboi90/ZoomRecovery/releases/latest \
-            | python3 -c "import sys,json; data=json.load(sys.stdin); print(data.get('tag_name', ''))")
+          set -euo pipefail
 
+          # --- fetch latest release (authenticated to avoid rate limits) ---
+          RESP=$(curl -sS -w $'\n%{http_code}' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/twinboi90/ZoomRecovery/releases/latest)
+          CODE=$(printf '%s' "$RESP" | tail -n1)
+          BODY=$(printf '%s' "$RESP" | sed '$d')
+
+          if [ "$CODE" != "200" ]; then
+            echo "GitHub API request failed (HTTP $CODE):"
+            echo "$BODY"
+            exit 1
+          fi
+
+          LATEST=$(printf '%s' "$BODY" \
+            | python3 -c "import sys,json; print(json.load(sys.stdin).get('tag_name',''))")
           if [ -z "$LATEST" ]; then
-            echo "Failed to fetch latest release or no releases found."
+            echo "No published release found for twinboi90/ZoomRecovery."
             exit 1
           fi
 
           CURRENT=$(sed -n 's|.*releases/download/\([^/]*\)/zoomrecovery.*|\1|p' Formula/zoomrecovery.rb)
-
-          echo "Latest release: $LATEST"
+          echo "Latest release:  $LATEST"
           echo "Formula version: $CURRENT"
 
           if [ "$LATEST" = "$CURRENT" ]; then
@@ -34,11 +46,21 @@ jobs:
             exit 0
           fi
 
+          # --- download new binary and compute checksum ---
           BINARY_URL="https://github.com/twinboi90/ZoomRecovery/releases/download/${LATEST}/zoomrecovery"
-          SHA256=$(curl -sL "$BINARY_URL" | sha256sum | awk '{print $1}')
+          if ! SHA256=$(curl -fSL "$BINARY_URL" | sha256sum | awk '{print $1}'); then
+            echo "Failed to download binary at $BINARY_URL"
+            exit 1
+          fi
 
+          # --- update formula ---
           sed -i "s|url \".*\"|url \"${BINARY_URL}\"|" Formula/zoomrecovery.rb
           sed -i "s|sha256 \".*\"|sha256 \"${SHA256}\"|" Formula/zoomrecovery.rb
+
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
